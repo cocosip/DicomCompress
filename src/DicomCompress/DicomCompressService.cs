@@ -28,9 +28,10 @@ namespace DicomCompress
 
         public virtual async Task CompressAsync()
         {
+            var results = new List<DicomCompressResult>();
+
             foreach (var file in Options.Files)
             {
-
                 if (!File.Exists(file))
                 {
                     Logger.LogInformation("文件:{file} 不存在.", file);
@@ -42,14 +43,17 @@ namespace DicomCompress
                 dicomFile.Dataset.NotValidated();
                 var sopInstanceUid = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.SOPInstanceUID, "00");
 
-                Logger.LogInformation("---------原始图像信息--------");
                 var sourceFile = new FileInfo(file);
-                Logger.LogInformation("原始图像大小:{Length} KB", Math.Round(sourceFile.Length * 1.0 / 1024, 1));
-                Logger.LogInformation("传输语法:{TransferSyntaxUID}", dicomFile.FileMetaInfo.GetSingleValueOrDefault(DicomTag.TransferSyntaxUID, ""));
-                Logger.LogInformation("BitsStored {BitsStored}", dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, ""));
-                Logger.LogInformation("BitsAllocated {BitsAllocated}", dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, ""));
-                Logger.LogInformation("---------原始图像信息--------");
-
+                var result = new DicomCompressResult()
+                {
+                    FilePath = file,
+                    FileSize = sourceFile.Length,
+                    SOPInstanceUID = sopInstanceUid,
+                    TransferSyntaxUID = dicomFile.FileMetaInfo.GetSingleValueOrDefault(DicomTag.TransferSyntaxUID, ""),
+                    BitsStored = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, ""),
+                    BitsAllocated = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, ""),
+                };
+                results.Add(result);
 
                 foreach (var (name, syntax) in GetTransferSyntaxes())
                 {
@@ -57,20 +61,47 @@ namespace DicomCompress
                     {
                         Logger.LogInformation("对图像进行 {name}({UID}) 压缩...", name, syntax.UID.UID);
                         var newDicomFile = DicomFileTranscoder.Transcode(dicomFile, syntax);
+
+                        var newBitsStored = newDicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, "");
+                        var newBitsAllocated = newDicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, "");
+
+
                         var fileName = $"{sopInstanceUid}-{name}.dcm";
                         var filePath = Path.Combine(Options.Output, fileName);
                         await newDicomFile.SaveAsync(filePath);
+                        var newFileInfo = new FileInfo(filePath);
 
-                        var compressFile = new FileInfo(filePath);
-                        Logger.LogInformation("对图像进行 {name}({UID}) 压缩后,文件大小:{Length} KB", name, syntax.UID.UID, Math.Round(compressFile.Length * 1.0 / 1024, 1));
+                        var item = new DicomCompressResult.DicomCompressResultItem()
+                        {
+                            Success = true,
+                            FileName = fileName,
+                            FilePath = filePath,
+                            FileSize = newFileInfo.Length,
+                            TransferSyntaxName = name,
+                            TransferSyntaxUID = syntax.UID.UID,
+                            BitsStored = newBitsStored,
+                            BitsAllocated = newBitsAllocated
+                        };
+                        result.AddItem(item);
 
                     }
                     catch (Exception ex)
                     {
+                        result.AddItem(new DicomCompressResult.DicomCompressResultItem()
+                        {
+                            Success = false,
+                            TransferSyntaxName = name,
+                            TransferSyntaxUID = syntax.UID.UID
+                        });
                         Logger.LogError(ex, "图像格式: {name} 压缩失败,异常信息:{Message}.", name, ex.Message);
                     }
                 }
                 Logger.LogInformation("完成图像的压缩");
+            }
+
+            foreach (var result in results)
+            {
+                Logger.LogInformation(result.ToString());
             }
 
 
