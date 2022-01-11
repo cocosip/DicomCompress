@@ -1,4 +1,5 @@
-﻿using Kayisoft.Abp.Dicom.Transcoder;
+﻿using FellowOakDicom;
+using Kayisoft.Abp.Dicom.Transcoder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -24,6 +25,9 @@ namespace DicomCompress
             context.Services.AddHostedService<DicomCompressHostedService>();
 
             Configure<DicomCompressOptions>(configuration.GetSection("DicomCompressOptions"));
+
+            var dicomSetupBuilder = new DicomSetupBuilder();
+            dicomSetupBuilder.SkipValidation();
         }
 
         public override void OnApplicationInitialization(ApplicationInitializationContext context)
