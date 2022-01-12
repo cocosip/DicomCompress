@@ -1,4 +1,5 @@
 ﻿using FellowOakDicom;
+using FellowOakDicom.Imaging.Codec;
 using Kayisoft.Abp.Dicom.Transcoder;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -28,43 +29,56 @@ namespace DicomCompress
 
         public virtual async Task CompressAsync()
         {
-            var results = new List<DicomCompressResult>();
-
-            foreach (var file in Options.Files)
+            var results = new DicomCompressResultCollection();
+            if (!Directory.Exists(Options.Input))
             {
-                if (!File.Exists(file))
-                {
-                    Logger.LogInformation("文件:{file} 不存在.", file);
-                    return;
-                }
-                Logger.LogInformation("开始对图像{file} 进行压缩...", file);
+                Logger.LogInformation("输入目录:{Input} 不存在", Options.Input);
+                return;
+            }
+
+
+            var files = Directory.GetFiles(Options.Input);
+            if (files.Length == 0)
+            {
+                Logger.LogInformation("文件下不存在任何DICOM文件");
+                return;
+            }
+
+            foreach (var file in files)
+            {
+                var fileInfo = new FileInfo(file);
+
+                Logger.LogInformation("开始对图像 {Name} 进行压缩...", fileInfo.Name);
 
                 var dicomFile = await DicomFile.OpenAsync(file);
-                dicomFile.Dataset.NotValidated();
                 var sopInstanceUid = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.SOPInstanceUID, "00");
 
-                var sourceFile = new FileInfo(file);
                 var result = new DicomCompressResult()
                 {
+                    FileName = fileInfo.Name,
                     FilePath = file,
-                    FileSize = sourceFile.Length,
+                    FileSize = fileInfo.Length,
                     SOPInstanceUID = sopInstanceUid,
-                    TransferSyntaxUID = dicomFile.FileMetaInfo.GetSingleValueOrDefault(DicomTag.TransferSyntaxUID, ""),
+                    IsEncapsulated = dicomFile.FileMetaInfo.InternalTransferSyntax.IsEncapsulated,
+                    Modality = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.Modality, ""),
+                    BodyPart = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BodyPartThickness, ""),
+                    TransferSyntaxUID = dicomFile.FileMetaInfo.InternalTransferSyntax.UID.UID,
+                    TransferSyntaxName = dicomFile.FileMetaInfo.InternalTransferSyntax.UID.Name,
                     BitsStored = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, ""),
                     BitsAllocated = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, ""),
                 };
                 results.Add(result);
-
+                var inputSyntax = dicomFile.FileMetaInfo.InternalTransferSyntax;
                 foreach (var (name, syntax) in GetTransferSyntaxes())
                 {
                     try
                     {
                         Logger.LogInformation("对图像进行 {name}({UID}) 压缩...", name, syntax.UID.UID);
-                        var newDicomFile = DicomFileTranscoder.Transcode(dicomFile, syntax);
+                        var dicomTranscoder = new DicomTranscoder(inputSyntax, syntax);
+                        var newDicomFile = dicomTranscoder.Transcode(dicomFile);
 
                         var newBitsStored = newDicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, "");
                         var newBitsAllocated = newDicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, "");
-
 
                         var fileName = $"{sopInstanceUid}-{name}.dcm";
                         var filePath = Path.Combine(Options.Output, fileName);
@@ -99,27 +113,27 @@ namespace DicomCompress
                 Logger.LogInformation("完成图像的压缩");
             }
 
-            foreach (var result in results)
-            {
-                Logger.LogInformation(result.ToString());
-            }
 
+            var logFile = Path.Combine(Options.Output, $"{DateTime.Now.ToString("yyyyMMddHHmmss")}.txt");
 
+            File.WriteAllText(logFile, results.ToString());
         }
 
         protected virtual IEnumerable<(string, DicomTransferSyntax)> GetTransferSyntaxes()
         {
             yield return (nameof(DicomTransferSyntax.JPEG2000Lossless), DicomTransferSyntax.JPEG2000Lossless);
-            yield return (nameof(DicomTransferSyntax.JPEG2000Lossy), DicomTransferSyntax.JPEG2000Lossy);
-            yield return (nameof(DicomTransferSyntax.JPEGProcess1), DicomTransferSyntax.JPEGProcess1);
-            yield return (nameof(DicomTransferSyntax.JPEGProcess2_4), DicomTransferSyntax.JPEGProcess2_4);
+            //yield return (nameof(DicomTransferSyntax.JPEG2000Lossy), DicomTransferSyntax.JPEG2000Lossy);
+            //yield return (nameof(DicomTransferSyntax.JPEGProcess1), DicomTransferSyntax.JPEGProcess1);
+            //yield return (nameof(DicomTransferSyntax.JPEGProcess2_4), DicomTransferSyntax.JPEGProcess2_4);
             yield return (nameof(DicomTransferSyntax.JPEGProcess14), DicomTransferSyntax.JPEGProcess14);
             yield return (nameof(DicomTransferSyntax.JPEGProcess14SV1), DicomTransferSyntax.JPEGProcess14SV1);
             yield return (nameof(DicomTransferSyntax.JPEGLSLossless), DicomTransferSyntax.JPEGLSLossless);
-            yield return (nameof(DicomTransferSyntax.JPEGLSNearLossless), DicomTransferSyntax.JPEGLSNearLossless);
+            //yield return (nameof(DicomTransferSyntax.JPEGLSNearLossless), DicomTransferSyntax.JPEGLSNearLossless);
             yield return (nameof(DicomTransferSyntax.RLELossless), DicomTransferSyntax.RLELossless);
             yield break;
         }
+
+
 
 
     }

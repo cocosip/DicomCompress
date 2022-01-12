@@ -28,6 +28,13 @@ namespace DicomCompress
 
             var dicomSetupBuilder = new DicomSetupBuilder();
             dicomSetupBuilder.SkipValidation();
+
+
+            Configure<AbpDicomTranscoderOptions>(options =>
+            {
+
+            });
+
         }
 
         public override void OnApplicationInitialization(ApplicationInitializationContext context)
