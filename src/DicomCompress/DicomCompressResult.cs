@@ -105,6 +105,7 @@ namespace DicomCompress
             var sb = new StringBuilder();
             sb.AppendFormat("[压缩文件信息]\r\n");
             sb.AppendFormat("文件名:{0} \r\n", FileName);
+            sb.AppendFormat("SOPInstanceUID:{0} \r\n", SOPInstanceUID);
             sb.AppendFormat("大小:{0} KB \r\n", Math.Round(FileSize * 1.0 / 1024, 1));
             sb.AppendFormat("是否压缩: {0} \r\n", IsEncapsulated);
             sb.AppendFormat("设备类型: {0} \r\n", Modality);
@@ -121,8 +122,12 @@ namespace DicomCompress
                 else
                 {
                     var ratio = Math.Round(FileSize * 1.0 / item.FileSize, 1);
-
-                    sb.AppendFormat("| 成功 | {0} | {1} KB \r\n", $"1:{ratio}", Math.Round(item.FileSize * 1.0 / 1024, 1));
+                    if (item.IsReduction)
+                    {
+                        ratio = Math.Round(item.FileSize * 1.0 / FileSize, 1);
+                    }
+                    
+                    sb.AppendFormat("| 成功 | {0} | {1} KB \r\n", $"压缩比 1:{ratio}", Math.Round(item.FileSize * 1.0 / 1024, 1));
                 }
             }
             sb.AppendLine($"--------------------------");
@@ -177,6 +182,11 @@ namespace DicomCompress
             /// <value></value>
             public long FileSize { get; set; }
 
+            /// <summary>
+            /// 是否为还原
+            /// </summary>
+            /// <value></value>
+            public bool IsReduction { get; set; }
 
 
 

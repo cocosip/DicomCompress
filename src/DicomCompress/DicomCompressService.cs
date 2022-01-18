@@ -1,4 +1,5 @@
 ﻿using FellowOakDicom;
+using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Codec;
 using Kayisoft.Abp.Dicom.Transcoder;
 using Microsoft.Extensions.Logging;
@@ -69,6 +70,8 @@ namespace DicomCompress
                 };
                 results.Add(result);
                 var inputSyntax = dicomFile.FileMetaInfo.TransferSyntax;
+                var prefixName = GetPrefixName(fileInfo.Name);
+
                 foreach (var (name, syntax) in GetTransferSyntaxes())
                 {
                     try
@@ -80,10 +83,12 @@ namespace DicomCompress
                         var newBitsStored = newDicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, "");
                         var newBitsAllocated = newDicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, "");
 
-                        var fileName = $"{sopInstanceUid}-{name}.dcm";
+                        var fileName = $"{prefixName}-{name}.dcm";
                         var filePath = Path.Combine(Options.Output, fileName);
                         await newDicomFile.SaveAsync(filePath);
                         var newFileInfo = new FileInfo(filePath);
+
+                        var isReduction = IsReduction(syntax);
 
                         var item = new DicomCompressResult.DicomCompressResultItem()
                         {
@@ -94,7 +99,8 @@ namespace DicomCompress
                             TransferSyntaxName = name,
                             TransferSyntaxUID = syntax.UID.UID,
                             BitsStored = newBitsStored,
-                            BitsAllocated = newBitsAllocated
+                            BitsAllocated = newBitsAllocated,
+                            IsReduction = isReduction
                         };
                         result.AddItem(item);
 
@@ -119,13 +125,23 @@ namespace DicomCompress
             File.WriteAllText(logFile, results.ToString());
         }
 
+        protected virtual string GetPrefixName(string fileName)
+        {
+            if (fileName.Contains("."))
+            {
+                return fileName.Substring(0, fileName.LastIndexOf("."));
+
+            }
+            return fileName;
+        }
+
         protected virtual IEnumerable<(string, DicomTransferSyntax)> GetTransferSyntaxes()
         {
-            yield return (nameof(DicomTransferSyntax.JPEG2000Lossless), DicomTransferSyntax.JPEG2000Lossless);
-            yield return (nameof(DicomTransferSyntax.JPEGProcess14), DicomTransferSyntax.JPEGProcess14);
-            yield return (nameof(DicomTransferSyntax.JPEGProcess14SV1), DicomTransferSyntax.JPEGProcess14SV1);
-            yield return (nameof(DicomTransferSyntax.JPEGLSLossless), DicomTransferSyntax.JPEGLSLossless);
-            yield return (nameof(DicomTransferSyntax.RLELossless), DicomTransferSyntax.RLELossless);
+            //yield return (nameof(DicomTransferSyntax.JPEG2000Lossless), DicomTransferSyntax.JPEG2000Lossless);
+            // yield return (nameof(DicomTransferSyntax.JPEGProcess14), DicomTransferSyntax.JPEGProcess14);
+            // yield return (nameof(DicomTransferSyntax.JPEGProcess14SV1), DicomTransferSyntax.JPEGProcess14SV1);
+            // yield return (nameof(DicomTransferSyntax.JPEGLSLossless), DicomTransferSyntax.JPEGLSLossless);
+            // yield return (nameof(DicomTransferSyntax.RLELossless), DicomTransferSyntax.RLELossless);
 
             //yield return (nameof(DicomTransferSyntax.JPEG2000Lossy), DicomTransferSyntax.JPEG2000Lossy);
             //yield return (nameof(DicomTransferSyntax.JPEGProcess1), DicomTransferSyntax.JPEGProcess1);
@@ -134,8 +150,18 @@ namespace DicomCompress
 
             //还原的格式
             //yield return (nameof(DicomTransferSyntax.ExplicitVRLittleEndian), DicomTransferSyntax.ExplicitVRLittleEndian);
-
+            yield return (nameof(DicomTransferSyntax.ExplicitVRBigEndian), DicomTransferSyntax.ExplicitVRBigEndian);
             yield break;
+        }
+
+
+        private bool IsReduction(DicomTransferSyntax transferSyntax)
+        {
+            if (transferSyntax == DicomTransferSyntax.ExplicitVRBigEndian || transferSyntax == DicomTransferSyntax.ExplicitVRLittleEndian || transferSyntax == DicomTransferSyntax.ImplicitVRBigEndian || transferSyntax == DicomTransferSyntax.ImplicitVRLittleEndian || transferSyntax == DicomTransferSyntax.DeflatedExplicitVRLittleEndian)
+            {
+                return true;
+            }
+            return false;
         }
 
 
