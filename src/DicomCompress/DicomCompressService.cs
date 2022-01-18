@@ -59,16 +59,16 @@ namespace DicomCompress
                     FilePath = file,
                     FileSize = fileInfo.Length,
                     SOPInstanceUID = sopInstanceUid,
-                    IsEncapsulated = dicomFile.FileMetaInfo.InternalTransferSyntax.IsEncapsulated,
+                    IsEncapsulated = dicomFile.FileMetaInfo.TransferSyntax.IsEncapsulated,
                     Modality = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.Modality, ""),
                     BodyPart = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BodyPartThickness, ""),
-                    TransferSyntaxUID = dicomFile.FileMetaInfo.InternalTransferSyntax.UID.UID,
-                    TransferSyntaxName = dicomFile.FileMetaInfo.InternalTransferSyntax.UID.Name,
+                    TransferSyntaxUID = dicomFile.FileMetaInfo.TransferSyntax.UID.UID,
+                    TransferSyntaxName = dicomFile.FileMetaInfo.TransferSyntax.UID.Name,
                     BitsStored = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsStored, ""),
                     BitsAllocated = dicomFile.Dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, ""),
                 };
                 results.Add(result);
-                var inputSyntax = dicomFile.FileMetaInfo.InternalTransferSyntax;
+                var inputSyntax = dicomFile.FileMetaInfo.TransferSyntax;
                 foreach (var (name, syntax) in GetTransferSyntaxes())
                 {
                     try
@@ -122,14 +122,19 @@ namespace DicomCompress
         protected virtual IEnumerable<(string, DicomTransferSyntax)> GetTransferSyntaxes()
         {
             yield return (nameof(DicomTransferSyntax.JPEG2000Lossless), DicomTransferSyntax.JPEG2000Lossless);
-            //yield return (nameof(DicomTransferSyntax.JPEG2000Lossy), DicomTransferSyntax.JPEG2000Lossy);
-            //yield return (nameof(DicomTransferSyntax.JPEGProcess1), DicomTransferSyntax.JPEGProcess1);
-            //yield return (nameof(DicomTransferSyntax.JPEGProcess2_4), DicomTransferSyntax.JPEGProcess2_4);
             yield return (nameof(DicomTransferSyntax.JPEGProcess14), DicomTransferSyntax.JPEGProcess14);
             yield return (nameof(DicomTransferSyntax.JPEGProcess14SV1), DicomTransferSyntax.JPEGProcess14SV1);
             yield return (nameof(DicomTransferSyntax.JPEGLSLossless), DicomTransferSyntax.JPEGLSLossless);
-            //yield return (nameof(DicomTransferSyntax.JPEGLSNearLossless), DicomTransferSyntax.JPEGLSNearLossless);
             yield return (nameof(DicomTransferSyntax.RLELossless), DicomTransferSyntax.RLELossless);
+
+            //yield return (nameof(DicomTransferSyntax.JPEG2000Lossy), DicomTransferSyntax.JPEG2000Lossy);
+            //yield return (nameof(DicomTransferSyntax.JPEGProcess1), DicomTransferSyntax.JPEGProcess1);
+            //yield return (nameof(DicomTransferSyntax.JPEGProcess2_4), DicomTransferSyntax.JPEGProcess2_4);
+            //yield return (nameof(DicomTransferSyntax.JPEGLSNearLossless), DicomTransferSyntax.JPEGLSNearLossless);
+
+            //还原的格式
+            //yield return (nameof(DicomTransferSyntax.ExplicitVRLittleEndian), DicomTransferSyntax.ExplicitVRLittleEndian);
+
             yield break;
         }
 
