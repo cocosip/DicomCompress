@@ -1,5 +1,4 @@
 ﻿using FellowOakDicom;
-using FellowOakDicom.Imaging;
 using FellowOakDicom.Imaging.Codec;
 using Kayisoft.Abp.Dicom.Transcoder;
 using Microsoft.Extensions.Logging;
@@ -139,7 +138,7 @@ namespace DicomCompress
         {
             //yield return (nameof(DicomTransferSyntax.JPEG2000Lossless), DicomTransferSyntax.JPEG2000Lossless);
             // yield return (nameof(DicomTransferSyntax.JPEGProcess14), DicomTransferSyntax.JPEGProcess14);
-            // yield return (nameof(DicomTransferSyntax.JPEGProcess14SV1), DicomTransferSyntax.JPEGProcess14SV1);
+            yield return (nameof(DicomTransferSyntax.JPEGProcess14SV1), DicomTransferSyntax.JPEGProcess14SV1);
             // yield return (nameof(DicomTransferSyntax.JPEGLSLossless), DicomTransferSyntax.JPEGLSLossless);
             // yield return (nameof(DicomTransferSyntax.RLELossless), DicomTransferSyntax.RLELossless);
 
@@ -150,7 +149,7 @@ namespace DicomCompress
 
             //还原的格式
             //yield return (nameof(DicomTransferSyntax.ExplicitVRLittleEndian), DicomTransferSyntax.ExplicitVRLittleEndian);
-            yield return (nameof(DicomTransferSyntax.ExplicitVRBigEndian), DicomTransferSyntax.ExplicitVRBigEndian);
+            //yield return (nameof(DicomTransferSyntax.ExplicitVRBigEndian), DicomTransferSyntax.ExplicitVRBigEndian);
             yield break;
         }
 
